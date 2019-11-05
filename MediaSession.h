@@ -19,13 +19,14 @@
 
 #include <cdm.h>
 #include <cdmi.h>
+#include <functional>
 
 namespace CDMi
 {
 class MediaKeySession : public IMediaKeySession
 {
 public:
-    MediaKeySession(widevine::Cdm*, int32_t);
+    MediaKeySession(widevine::Cdm*, std::function<void(void*)> cb);
     virtual ~MediaKeySession(void);
 
     virtual void Run(
@@ -96,6 +97,8 @@ private:
     widevine::Cdm::InitDataType m_initDataType;
     widevine::Cdm::SessionType m_licenseType;
     std::string m_sessionId;
+    std::function<void(void*)> m_piSessionCreatedCallback;
+    bool m_updatedServerCertificate;
     IMediaKeySessionCallback *m_piCallback;
     uint8_t m_IV[16];
 };

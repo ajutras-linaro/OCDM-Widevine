@@ -25,6 +25,8 @@
 
 namespace CDMi {
 
+using std::placeholders::_1;
+
 class WideVine : public IMediaKeys, public widevine::Cdm::IEventListener
 {
 private:
@@ -64,9 +66,7 @@ public:
 
         if (widevine::Cdm::kSuccess == widevine::Cdm::initialize(
                 widevine::Cdm::kNoSecureOutput, client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(0))) {
-	    // Setting the last parameter to true, requres serviceCertificates so the requests can be encrypted. Currently badly supported
-            // in the EME tests, so turn of for now :-)
-            _cdm = widevine::Cdm::create(this, &_host, false);
+            _cdm = widevine::Cdm::create(this, &_host, true);
         }
     }
     virtual ~WideVine() {
@@ -101,7 +101,8 @@ public:
         CDMi_RESULT dr = CDMi_S_FALSE;
         *f_ppiMediaKeySession = nullptr;
 
-        MediaKeySession* mediaKeySession = new MediaKeySession(_cdm, licenseType);
+        MediaKeySession *mediaKeySession = new MediaKeySession(_cdm,
+            std::bind(&SessionCreatedCallback, reinterpret_cast<void*>(this), _1));
 
         dr = mediaKeySession->Init(licenseType,
             f_pwszInitDataType,
@@ -110,17 +111,34 @@ public:
             f_pbCDMData,
             f_cbCDMData);
 
-
         if (dr != CDMi_SUCCESS) {
             delete mediaKeySession;
         }
         else {
-            std::string sessionId (mediaKeySession->GetSessionId());
-            _sessions.insert(std::pair<std::string, MediaKeySession*>(sessionId, mediaKeySession));
             *f_ppiMediaKeySession = mediaKeySession;
         }
-
         return dr;
+    }
+
+    static void SessionCreatedCallback(void *mediaKeysArg,
+            void *mediaKeySessionArg) {
+        WideVine *mediaKeys = reinterpret_cast<WideVine*>(mediaKeysArg);
+        mediaKeys->SessionCreatedCallbackInternal(mediaKeySessionArg);
+    }
+
+    void SessionCreatedCallbackInternal(void *mediaKeySessionArg) {
+
+        MediaKeySession *mediaKeySession =
+                reinterpret_cast<MediaKeySession*>(mediaKeySessionArg);
+        std::string sessionId(mediaKeySession->GetSessionId());
+
+        _adminLock.Lock();
+
+        _sessions.insert(
+                std::pair<std::string, MediaKeySession*>(sessionId,
+                        mediaKeySession));
+
+        _adminLock.Unlock();
     }
 
     virtual CDMi_RESULT SetServerCertificate(
