@@ -70,7 +70,9 @@ public:
         uint8_t **f_ppbOpaqueClearContent,
         const uint8_t keyIdLength,
         const uint8_t* keyId,
-        bool initWithLast15);
+        bool initWithLast15,
+        int secureFd,
+        uint32_t secureSize);
 
 
     virtual CDMi_RESULT ReleaseClearContent(
