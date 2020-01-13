@@ -23,6 +23,8 @@
 #include <sstream>
 #include <sys/utsname.h>
 
+#define ENABLE_SDP 1
+
 namespace CDMi {
 
 class WideVine : public IMediaKeys, public widevine::Cdm::IEventListener
@@ -63,7 +65,12 @@ public:
         // widevine::Cdm::DeviceCertificateRequest cert_request;
 
         if (widevine::Cdm::kSuccess == widevine::Cdm::initialize(
-                widevine::Cdm::kNoSecureOutput, client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(0))) {
+#ifdef ENABLE_SDP
+                widevine::Cdm::kOpaqueHandle,
+#else
+                widevine::Cdm::kNoSecureOutput,
+#endif
+                client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(0))) {
 	    // Setting the last parameter to true, requres serviceCertificates so the requests can be encrypted. Currently badly supported
             // in the EME tests, so turn of for now :-)
             _cdm = widevine::Cdm::create(this, &_host, false);
