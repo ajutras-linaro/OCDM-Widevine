@@ -427,6 +427,17 @@ CDMi_RESULT MediaKeySession::Init(
   return CDMi_SUCCESS;
 }
 
+#define ENABLE_SDP 1
+#ifdef ENABLE_SDP
+typedef struct native_handle
+{
+    int version;        /* sizeof(native_handle_t) */
+    int numFds;         /* number of file-descriptors at &data[0] */
+    int numInts;        /* number of ints at &data[numFds] */
+    int data[4];        /* numFds + numInts ints */
+} native_handle_t;
+#endif
+
 CDMi_RESULT MediaKeySession::Decrypt(
     const uint8_t *f_pbSessionKey,
     uint32_t f_cbSessionKey,
@@ -440,7 +451,9 @@ CDMi_RESULT MediaKeySession::Decrypt(
     uint8_t **f_ppbOpaqueClearContent,
     const uint8_t keyIdLength,
     const uint8_t* keyId,
-    bool /* initWithLast15 */)
+    bool initWithLast15,
+    int secureFd,
+    uint32_t secureSize)
 {
   g_lock.Lock();
   widevine::Cdm::KeyStatusMap map;
@@ -460,6 +473,10 @@ CDMi_RESULT MediaKeySession::Decrypt(
       // if keyid is provided, find it in the map
       std::string keyIdString((const char*) keyId, (size_t) keyIdLength);
       it = map.find(keyIdString);
+      if (it == map.end()) {
+        printf("ERROR: key ID is not found!\n");
+        return status;
+      }
     } else {
       // if no keyid is provided, use the first one in the map
       it = map.begin();
@@ -468,24 +485,88 @@ CDMi_RESULT MediaKeySession::Decrypt(
     // FIXME: We just check the first key? How do we know that's the Widevine key and not, say, a PlayReady one?
     if (widevine::Cdm::kUsable == it->second) {
       widevine::Cdm::OutputBuffer output;
-      uint8_t *outputBuffer = (uint8_t*) malloc(f_cbData * sizeof(uint8_t));
-      output.data = outputBuffer;
-      output.data_length = f_cbData;
-      widevine::Cdm::InputBuffer input;
-      input.data = f_pbData;
-      input.data_length = f_cbData;
-      input.key_id = reinterpret_cast<const uint8_t*>((it->first).c_str());
-      input.key_id_length = (it->first).size();
-      input.iv = m_IV;
-      input.iv_length = sizeof(m_IV);
+      uint8_t *outputBuffer = NULL;
 
-      if (widevine::Cdm::kSuccess == m_cdm->decrypt(input, output)) {
-        /* Return clear content */
-        *f_pcbOpaqueClearContent = output.data_length;
-        *f_ppbOpaqueClearContent = outputBuffer;
-        
-        status = CDMi_SUCCESS;
+      uint32_t defaultSubSampleMapping[2];
+      const uint32_t *subSampleMapping = NULL;
+      uint32_t subSampleCount = 0;
+      uint32_t offset = 0;
+
+#ifdef ENABLE_SDP
+      native_handle_t handle = {sizeof(native_handle_t), 2, 2, {0,0,0,0}};
+#endif
+
+      if(f_cdwSubSampleMapping == 0) {
+        /* When there is no subsample information, data is completely encrypted. */
+        defaultSubSampleMapping[0] = 0;         /* Clear data */
+        defaultSubSampleMapping[1] = f_cbData;  /* Encrypted data */
+        subSampleMapping = defaultSubSampleMapping;
+        subSampleCount = 2;
+      } else {
+        subSampleMapping = f_pdwSubSampleMapping;
+        subSampleCount = f_cdwSubSampleMapping;
       }
+
+#ifdef ENABLE_SDP
+      output.is_secure = (secureFd >= 0);
+#else
+      output.is_secure = false;
+#endif
+
+      if(output.is_secure == false) {
+        outputBuffer = (uint8_t*) malloc(f_cbData * sizeof(uint8_t));
+      }
+
+      for(uint32_t subSampleIndex = 0; subSampleIndex < subSampleCount; subSampleIndex++) {
+
+        if(subSampleMapping[subSampleIndex] == 0) {
+          continue;
+        }
+
+  #ifdef ENABLE_SDP
+        if(output.is_secure) {
+          handle.data[0] = secureFd;
+          handle.data[1] = -1; /* Shared memory. Not used for decryption. */
+          handle.data[2] = secureSize;
+          handle.data[3] = 0;  /* Shared memory size */
+          output.data = (uint8_t *)&handle;
+          output.data_length = secureSize;
+          output.data_offset = offset;
+        } else {
+          output.data = outputBuffer + offset;
+          output.data_length = subSampleMapping[subSampleIndex];
+          output.data_offset = 0;
+        }
+  #else
+        output.data = outputBuffer + offset;
+        output.data_length = subSampleMapping[subSampleIndex];
+        output.data_offset = 0;
+  #endif
+        widevine::Cdm::InputBuffer input;
+        input.data = f_pbData + offset;
+        input.data_length = subSampleMapping[subSampleIndex];
+        input.key_id = reinterpret_cast<const uint8_t*>((it->first).c_str());
+        input.key_id_length = (it->first).size();
+        input.iv = m_IV;
+        input.iv_length = sizeof(m_IV);
+        /* Even subsamples are clear, odd subsamples are encrypted */
+        input.encryption_scheme = (subSampleIndex % 2) ? widevine::Cdm::kAesCtr : widevine::Cdm::kClear;
+
+        if (widevine::Cdm::kSuccess != m_cdm->decrypt(input, output)) {
+          free(outputBuffer);
+          return CDMi_S_FALSE;
+        }
+
+        offset += subSampleMapping[subSampleIndex];
+      }
+
+      if(output.is_secure == false)
+      {
+        /* Return clear content */
+        *f_pcbOpaqueClearContent = f_cbData;
+        *f_ppbOpaqueClearContent = outputBuffer;
+      }
+      status = CDMi_SUCCESS;
     }
   }
 
