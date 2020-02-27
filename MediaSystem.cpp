@@ -129,8 +129,13 @@ public:
 
         CDMi_RESULT dr = CDMi_S_FALSE;
 
+        //ce_cdm v15 requires a ServiceRole
+        //To replicate the previous behavior, pass `Cdm::kAllServices` to install
+        //the certificate for both services at the same time (Provisioning Service
+        //and Licensing Service.
+
         std::string serverCertificate(reinterpret_cast<const char*>(f_pbServerCertificate), f_cbServerCertificate);
-        if (widevine::Cdm::kSuccess == _cdm->setServiceCertificate(serverCertificate)) {
+        if (widevine::Cdm::kSuccess == _cdm->setServiceCertificate(widevine::Cdm::kAllServices, serverCertificate)) {
             dr = CDMi_SUCCESS;
         }
         return dr;
