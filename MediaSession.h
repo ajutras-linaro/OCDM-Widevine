@@ -84,7 +84,6 @@ public:
     void onKeyStatusChange();
     void onRemoveComplete();
     void onDeferredComplete(widevine::Cdm::Status);
-    void onDirectIndividualizationRequest(const std::string&);
 
 private:
     void onKeyStatusError(widevine::Cdm::Status status);

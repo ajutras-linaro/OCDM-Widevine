@@ -44,7 +44,10 @@ MediaKeySession::MediaKeySession(widevine::Cdm *cdm, int32_t licenseType)
     , m_initDataType(widevine::Cdm::kCenc)
     , m_licenseType((widevine::Cdm::SessionType)licenseType)
     , m_sessionId("") {
-  m_cdm->createSession(m_licenseType, &m_sessionId);
+
+  if (widevine::Cdm::kSuccess != m_cdm->createSession(m_licenseType, &m_sessionId)) {
+    TRACE_L1("%s:%d createSession error\n",__FUNCTION__, __LINE__);
+  }
 
   ::memset(m_IV, 0 , sizeof(m_IV));;
 }
@@ -60,7 +63,7 @@ void MediaKeySession::Run(const IMediaKeySessionCallback *f_piMediaKeySessionCal
 
     widevine::Cdm::Status status = m_cdm->generateRequest(m_sessionId, m_initDataType, m_initData);
     if (widevine::Cdm::kSuccess != status) {
-       printf("generateRequest failed\n");
+       TRACE_L1("%s: generateRequest() failed\n", __FUNCTION__);
        m_piCallback->OnKeyMessage((const uint8_t *) "", 0, "");
     }
   }
@@ -90,7 +93,7 @@ void MediaKeySession::onMessage(widevine::Cdm::MessageType f_messageType, const 
     break;
   }
   default:
-    printf("unsupported message type %d\n", f_messageType);
+    TRACE_L1("unsupported message type %d\n", f_messageType);
     break;
   }
   message.append(f_message.c_str(),  f_message.size());
@@ -166,6 +169,7 @@ void MediaKeySession::onKeyStatusError(widevine::Cdm::Status status) {
     errorStatus = "UnExpectedError";
     break;
   }
+  TRACE_L1("%s: errorStatus=%s", __FUNCTION__, errorStatus.c_str());
   m_piCallback->OnError(0, CDMi_S_FALSE, errorStatus.c_str());
 }
 
@@ -184,9 +188,6 @@ void MediaKeySession::onRemoveComplete() {
 }
 
 void MediaKeySession::onDeferredComplete(widevine::Cdm::Status) {
-}
-
-void MediaKeySession::onDirectIndividualizationRequest(const string&) {
 }
 
 CDMi_RESULT MediaKeySession::Load(void) {
