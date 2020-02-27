@@ -208,18 +208,6 @@ public:
         _adminLock.Unlock();
     }
 
-    // Called when the CDM requires a new device certificate
-    virtual void onDirectIndividualizationRequest(const std::string& session_id, const std::string& request) {
-
-        _adminLock.Lock();
-
-        SessionMap::iterator index (_sessions.find(session_id));
-
-        if (index != _sessions.end()) index->second->onDirectIndividualizationRequest(request);
-
-        _adminLock.Unlock();
-    }
-
 private:
     WPEFramework::Core::CriticalSection _adminLock;
     widevine::Cdm* _cdm;
