@@ -47,7 +47,7 @@ public:
         client_info.company_name = "www.metrological.com";
         client_info.model_name = "www";
 
-    #if defined(__linux__)
+#if defined(__linux__)
         client_info.device_name = "Linux";
         {
             struct utsname name;
@@ -63,9 +63,9 @@ public:
         // widevine::Cdm::DeviceCertificateRequest cert_request;
 
         if (widevine::Cdm::kSuccess == widevine::Cdm::initialize(
-                widevine::Cdm::kNoSecureOutput, client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(0))) {
+                widevine::Cdm::kNoSecureOutput, client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(4))) {
 	    // Setting the last parameter to true, requres serviceCertificates so the requests can be encrypted. Currently badly supported
-            // in the EME tests, so turn of for now :-)
+            // in the EME tests, so turn off for now :-)
             _cdm = widevine::Cdm::create(this, &_host, false);
         }
     }
