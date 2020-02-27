@@ -174,12 +174,12 @@ public:
         _adminLock.Unlock();
     }
 
-    virtual void onKeyStatusesChange(const std::string& session_id) {
+    virtual void onKeyStatusesChange(const std::string& session_id, bool has_new_usable_key) {
 
         _adminLock.Lock();
 
         SessionMap::iterator index (_sessions.find(session_id));
-
+        //TODO ce_cdm should probably update MediaSession interface
         if (index != _sessions.end()) index->second->onKeyStatusChange();
 
         _adminLock.Unlock();
