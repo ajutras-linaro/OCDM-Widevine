@@ -232,6 +232,9 @@ void MediaKeySession::onRemoveComplete() {
 void MediaKeySession::onDeferredComplete(widevine::Cdm::Status) {
 }
 
+void MediaKeySession::onDirectIndividualizationRequest(const string&) {
+}
+
 CDMi_RESULT MediaKeySession::Load(void) {
   CDMi_RESULT ret = CDMi_S_FALSE;
   g_lock.Lock();
