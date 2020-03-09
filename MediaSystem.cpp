@@ -60,7 +60,7 @@ public:
 #endif
         client_info.build_info = __DATE__;
 
-        // widevine::Cdm::DeviceCertificateRequest cert_request;
+        TRACE_L1("Built " << __DATE__ << " " << __TIME__ << std::endl);
 
         if (widevine::Cdm::kSuccess == widevine::Cdm::initialize(
                 widevine::Cdm::kNoSecureOutput, client_info, &_host, &_host, &_host, static_cast<widevine::Cdm::LogLevel>(4))) {
