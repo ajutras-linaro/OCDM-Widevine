@@ -105,8 +105,8 @@ void MediaKeySession::Run(const IMediaKeySessionCallback *f_piMediaKeySessionCal
 
     widevine::Cdm::Status status = m_cdm->generateRequest(m_sessionId, m_initDataType, m_initData);
     if (widevine::Cdm::kSuccess != status) {
-       TRACE_L1("%s: generateRequest() failed\n", __FUNCTION__);
-       m_piCallback->OnKeyMessage((const uint8_t *) "", 0, "");
+      TRACE_L1("%s: generateRequest() failed CdmStatus=%s", __FUNCTION__, widevineStatusToCString(status));
+      m_piCallback->OnKeyMessage((const uint8_t *) "", 0, "");
     }
   }
   else {
