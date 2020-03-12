@@ -37,6 +37,48 @@ namespace CDMi {
 
 WPEFramework::Core::CriticalSection g_lock;
 
+static const char* widevineStatusToCString(widevine::Cdm::Status Status)
+{
+  switch (Status) {
+  case widevine::Cdm::kSuccess:
+    return "Cdm::kSuccess";
+    break;
+  case widevine::Cdm::kNeedsDeviceCertificate:
+    return "Cdm::kNeedsDeviceCertificate";
+    break;
+  case widevine::Cdm::kSessionNotFound:
+    return "Cdm::kSessionNotFound";
+    break;
+  case widevine::Cdm::kDecryptError:
+    return "Cdm::kDecryptError";
+    break;
+  case widevine::Cdm::kNoKey:
+    return "Cdm::kNoKey";
+    break;
+  case widevine::Cdm::kTypeError:
+    return "Cdm::kTypeError";
+    break;
+  case widevine::Cdm::kNotSupported:
+    return "Cdm::kNotSupported";
+    break;
+  case widevine::Cdm::kInvalidState:
+    return "Cdm::kInvalidState";
+    break;
+  case widevine::Cdm::kQuotaExceeded:
+    return "Cdm::kQuotaExceeded";
+    break;
+  case widevine::Cdm::kRangeError:
+    return "Cdm::kRangeError";
+    break;
+  case widevine::Cdm::kUnexpectedError:
+    return "Cdm::kUnexpectedError";
+    break;
+  default:
+    return "Unknown Cdm::Status value";
+    break;
+  }
+}
+
 MediaKeySession::MediaKeySession(widevine::Cdm *cdm, int32_t licenseType)
     : m_cdm(cdm)
     , m_CDMData("")
