@@ -23,8 +23,6 @@
 #include <sstream>
 #include <sys/utsname.h>
 
-#define ENABLE_SDP 1
-
 namespace CDMi {
 
 class WideVine : public IMediaKeys, public widevine::Cdm::IEventListener
@@ -65,7 +63,7 @@ public:
         TRACE_L1("Built " << __DATE__ << " " << __TIME__ << std::endl);
 
         if (widevine::Cdm::kSuccess == widevine::Cdm::initialize(
-#ifdef ENABLE_SDP
+#ifdef ENABLE_SECURE_DATA_PATH
                 widevine::Cdm::kOpaqueHandle,
 #else
                 widevine::Cdm::kNoSecureOutput,
