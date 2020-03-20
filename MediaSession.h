@@ -18,7 +18,7 @@
 #pragma once
 
 #include <cdm.h>
-#include <cdmi.h>
+#include "interfaces/IDRM.h"
 
 namespace CDMi
 {
@@ -73,7 +73,6 @@ public:
         bool initWithLast15,
         int secureFd,
         uint32_t secureSize);
-
 
     virtual CDMi_RESULT ReleaseClearContent(
         const uint8_t *f_pbSessionKey,
