@@ -431,8 +431,7 @@ CDMi_RESULT MediaKeySession::Init(
   return CDMi_SUCCESS;
 }
 
-#define ENABLE_SDP 1
-#ifdef ENABLE_SDP
+#ifdef ENABLE_SECURE_DATA_PATH
 typedef struct native_handle
 {
     int version;        /* sizeof(native_handle_t) */
@@ -496,7 +495,7 @@ CDMi_RESULT MediaKeySession::Decrypt(
       uint32_t subSampleCount = 0;
       uint32_t offset = 0;
 
-#ifdef ENABLE_SDP
+#ifdef ENABLE_SECURE_DATA_PATH
       native_handle_t handle = {sizeof(native_handle_t), 2, 2, {0,0,0,0}};
 #endif
 
@@ -511,7 +510,7 @@ CDMi_RESULT MediaKeySession::Decrypt(
         subSampleCount = f_cdwSubSampleMapping;
       }
 
-#ifdef ENABLE_SDP
+#ifdef ENABLE_SECURE_DATA_PATH
       output.is_secure = (secureFd >= 0);
 #else
       output.is_secure = false;
@@ -527,7 +526,7 @@ CDMi_RESULT MediaKeySession::Decrypt(
           continue;
         }
 
-  #ifdef ENABLE_SDP
+  #ifdef ENABLE_SECURE_DATA_PATH
         if(output.is_secure) {
           handle.data[0] = secureFd;
           handle.data[1] = -1; /* Shared memory. Not used for decryption. */

@@ -28,4 +28,8 @@ target_link_libraries(${PLUGIN_NAME} PRIVATE ${PLUGIN_LIBS} ${NAMESPACE}Core::${
 set_target_properties(${PLUGIN_NAME} PROPERTIES SUFFIX ".drm")
 set_target_properties(${PLUGIN_NAME} PROPERTIES PREFIX "")
 
+if("${SECURE_DATA_PATH}" STREQUAL "ON")
+    add_definitions(-DENABLE_SECURE_DATA_PATH=1)
+endif()
+
 install(TARGETS ${PLUGIN_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${NAMESPACE}/OCDM)
