@@ -103,7 +103,19 @@ void MediaKeySession::Run(const IMediaKeySessionCallback *f_piMediaKeySessionCal
   if (f_piMediaKeySessionCallback) {
     m_piCallback = const_cast<IMediaKeySessionCallback*>(f_piMediaKeySessionCallback);
 
-    widevine::Cdm::Status status = m_cdm->generateRequest(m_sessionId, m_initDataType, m_initData);
+    const int retry_num = 5;
+    widevine::Cdm::Status status;
+    //retry several times if there is a nonce flood error
+    for (int i = 0; i < retry_num; i++) {
+      TRACE_L1("generateRequest() attempt %d", i);
+      status = m_cdm->generateRequest(m_sessionId, m_initDataType, m_initData);
+      if (status == widevine::Cdm::kQuotaExceeded) {
+        sleep(1);
+        continue;
+      }
+      break;
+    }
+
     if (widevine::Cdm::kSuccess != status) {
       TRACE_L1("%s: generateRequest() failed CdmStatus=%s", __FUNCTION__, widevineStatusToCString(status));
       m_piCallback->OnKeyMessage((const uint8_t *) "", 0, "");
@@ -250,11 +262,26 @@ CDMi_RESULT MediaKeySession::Load(void) {
 void MediaKeySession::Update(
     const uint8_t *f_pbKeyMessageResponse,
     uint32_t f_cbKeyMessageResponse) {
+  const int retry_num = 5;
+  widevine::Cdm::Status status;
+
   std::string keyResponse(reinterpret_cast<const char*>(f_pbKeyMessageResponse),
       f_cbKeyMessageResponse);
   g_lock.Lock();
-  if (widevine::Cdm::kSuccess != m_cdm->update(m_sessionId, keyResponse))
-     onKeyStatusChange();
+
+  //retry several times if there is a nonce flood error
+  for (int i = 0; i < retry_num; i++) {
+    TRACE_L1("Update() attempt=%d\n", i);
+    status = m_cdm->update(m_sessionId, keyResponse);
+    if (status == widevine::Cdm::kQuotaExceeded) {
+      sleep(1);
+      continue;
+    }
+    break;
+  }
+  if (status != widevine::Cdm::kSuccess)
+    onKeyStatusChange();
+
   g_lock.Unlock();
 }
 
