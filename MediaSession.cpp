@@ -29,6 +29,8 @@
 
 #include <core/core.h>
 
+#include <curl/curl.h>
+
 #define NYI_KEYSYSTEM "keysystem-placeholder"
 
 using namespace std;
@@ -92,6 +94,58 @@ MediaKeySession::MediaKeySession(widevine::Cdm *cdm, int32_t licenseType)
   }
 
   ::memset(m_IV, 0 , sizeof(m_IV));;
+}
+
+//callback called by libcurl for writing received data
+size_t LibcurlWriteMemoryCallback(void *contents, size_t size, size_t nmemb, std::string *str)
+{
+  size_t realsize = size * nmemb;
+  TRACE_L1("%s: realsize=%zx", __FUNCTION__, realsize);
+  str->append(reinterpret_cast<const char*>(contents), realsize);
+  return realsize;
+}
+
+std::string MediaKeySession::getProvisioningResponse(const std::string& message) {
+  std::string reply;
+  // Google test provisioning server TODO this should be configurable in some way
+  std::string uri = "https://staging-www.sandbox.googleapis.com/certificateprovisioning/v1/devicecertificates/create?key=AIzaSyB-5OLKTx2iU5mko18DfdwK5611JIjbUhE";
+  CURL *curl;
+  CURLcode res;
+
+  uri += "&signedRequest=" + message;
+
+  //In windows, this will init the winsock stuff
+  curl_global_init(CURL_GLOBAL_ALL);
+
+  curl = curl_easy_init();
+  if(curl) {
+    curl_easy_setopt(curl, CURLOPT_URL, uri.c_str());
+
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
+
+    //send all data to this function
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &LibcurlWriteMemoryCallback);
+
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&reply);
+    //some servers require UA string. ce_cdm test code sends the following
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "Widevine CDM v1.0");
+
+    //perform the request, res will get the return code
+    res = curl_easy_perform(curl);
+
+    if(res != CURLE_OK) {
+      TRACE_L1("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+     } else {
+      //dump the prov server reply
+      TRACE_L1("curl_easy_perform() ok res = %d", res);
+      TRACE_L1("response = %s", reply.c_str());
+    }
+
+    curl_easy_cleanup(curl);
+  }
+  curl_global_cleanup();
+
+  return reply;
 }
 
 MediaKeySession::~MediaKeySession(void) {

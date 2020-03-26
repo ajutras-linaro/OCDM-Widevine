@@ -33,6 +33,8 @@ public:
 
     void* RunThread(int i);
 
+    std::string getProvisioningResponse(const std::string& message);
+
     virtual CDMi_RESULT Load();
 
     virtual void Update(
