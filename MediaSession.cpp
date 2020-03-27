@@ -89,8 +89,33 @@ MediaKeySession::MediaKeySession(widevine::Cdm *cdm, int32_t licenseType)
     , m_licenseType((widevine::Cdm::SessionType)licenseType)
     , m_sessionId("") {
 
-  if (widevine::Cdm::kSuccess != m_cdm->createSession(m_licenseType, &m_sessionId)) {
-    TRACE_L1("%s:%d createSession error\n",__FUNCTION__, __LINE__);
+  widevine::Cdm::Status status;
+  std::string destUrl;
+  std::string message;
+  std::string reply;
+
+  if (!m_cdm->isProvisioned()) {
+    TRACE_L1("%s: isProvisioned() false", __FUNCTION__);
+
+    status = m_cdm->getProvisioningRequest(&message);
+    if (status != widevine::Cdm::kSuccess) {
+      TRACE_L1("%s: getProvisioningRequest() failed status=%s"
+               , __FUNCTION__, widevineStatusToCString(status));
+    }
+
+    reply = MediaKeySession::getProvisioningResponse(message);
+
+    status = m_cdm->handleProvisioningResponse(reply);
+    if (status != widevine::Cdm::kSuccess) {
+      TRACE_L1("%s: handleProvisioningResponse() failed status=%s"
+               , __FUNCTION__, widevineStatusToCString(status));
+    }
+  }
+
+  status = m_cdm->createSession(m_licenseType, &m_sessionId);
+  if (status != widevine::Cdm::kSuccess) {
+    TRACE_L1("%s: createSession() failed status=%s\n"
+             , __FUNCTION__, widevineStatusToCString(status));
   }
 
   ::memset(m_IV, 0 , sizeof(m_IV));;
